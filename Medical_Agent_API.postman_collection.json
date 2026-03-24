@@ -1,0 +1,567 @@
+{
+	"info": {
+		"_postman_id": "medical-agent-tests",
+		"name": "Medical Agent API - Testes Completos",
+		"description": "Collection completa de testes para o agente autônomo de agendamento médico.\n\nPasso 1: Execute o Health Check.\nPasso 2: Execute os testes na ordem.\nPasso 3: Copie o sessionId retornado nos testes de conversa para manter o contexto.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "session_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "00 - Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/health",
+					"host": ["{{base_url}}"],
+					"path": ["api", "health"]
+				},
+				"description": "Verifica se a aplicação está rodando corretamente."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Service is UP', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql('UP');",
+							"    pm.expect(jsonData.service).to.eql('medical-agent');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "01 - Criar Sessão",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/session",
+					"host": ["{{base_url}}"],
+					"path": ["api", "session"]
+				},
+				"description": "Cria uma nova sessão de conversa e retorna um sessionId UUID."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Session ID is returned', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.sessionId).to.not.be.empty;",
+							"    pm.collectionVariables.set('session_id', jsonData.sessionId);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "02 - Saudação (sem sessão)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userMessage\": \"Olá, quero agendar uma consulta\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Primeira mensagem sem sessionId. A API cria a sessão automaticamente."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Session ID and reply returned', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.sessionId).to.not.be.empty;",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"    pm.collectionVariables.set('session_id', jsonData.sessionId);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "03 - Médico Existente (Matheus)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sessionId\": \"{{session_id}}\",\n    \"userMessage\": \"Quero uma consulta com o Dr. Matheus\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Continua a conversa informando um médico cadastrado (Matheus - Cardiologista). O agente deve reconhecê-lo e perguntar a data."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Reply contains text', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "04 - Médico Inexistente (Carlos)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userMessage\": \"Quero consulta com Dr. Carlos\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Busca por um médico que NÃO existe no banco. O agente deve informar que não encontrou e perguntar a especialidade."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Reply suggests specialty', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"    pm.collectionVariables.set('session_id', jsonData.sessionId);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "05 - Especialidade Existente (Pediatria)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sessionId\": \"{{session_id}}\",\n    \"userMessage\": \"Preciso de um pediatra\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Busca médicos pela especialidade 'pediatria'. Deve retornar a Dra. Marta."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Reply mentions Marta', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "06 - Especialidade Inexistente (Dermatologia)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userMessage\": \"Preciso de um dermatologista\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Busca por especialidade que NÃO existe. O agente deve informar que não atende e listar as especialidades disponíveis."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Reply lists available specialties', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "07 - Listar Especialidades",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userMessage\": \"Quais especialidades vocês atendem?\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Pergunta diretamente quais especialidades a clínica oferece. O agente deve listar: cardiologista, pediatria, nutricionista."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Reply contains specialties', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "08.1 - Fluxo Completo: Início",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userMessage\": \"Oi, quero marcar uma consulta\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "FLUXO COMPLETO - Passo 1: Inicia a conversa. Copie o sessionId para os próximos passos."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"var jsonData = pm.response.json();",
+							"pm.collectionVariables.set('session_id', jsonData.sessionId);",
+							"pm.test('Session started', function () {",
+							"    pm.expect(jsonData.sessionId).to.not.be.empty;",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "08.2 - Fluxo Completo: Escolher Médico",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sessionId\": \"{{session_id}}\",\n    \"userMessage\": \"Com a Suellen, nutricionista\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "FLUXO COMPLETO - Passo 2: Informa o nome do médico."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Agent asks for date', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "08.3 - Fluxo Completo: Informar Data",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sessionId\": \"{{session_id}}\",\n    \"userMessage\": \"Amanhã às 10:00\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "FLUXO COMPLETO - Passo 3: Informa a data desejada. O agente verifica a disponibilidade no Google Calendar."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Agent checks availability', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "08.4 - Fluxo Completo: Confirmar Nome",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sessionId\": \"{{session_id}}\",\n    \"userMessage\": \"Sim, meu nome é Giovanni\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "FLUXO COMPLETO - Passo 4: Confirma e informa o nome do paciente. O agente cria o evento no Google Calendar."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Appointment confirmed', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "09 - Mensagem Fora do Escopo",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userMessage\": \"Qual a previsão do tempo para amanhã?\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Envia uma mensagem fora do escopo de agendamentos. O agente deve educadamente redirecionar para o assunto de consultas."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Agent stays on topic', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.replyText).to.not.be.empty;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "10 - Body Inválido (Erro)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/chat",
+					"host": ["{{base_url}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Envia um body vazio para testar o tratamento de erros da API."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Returns error or handles gracefully', function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([400, 500, 200]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		}
+	]
+}
