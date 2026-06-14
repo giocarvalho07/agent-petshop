@@ -34,7 +34,7 @@ spring:
   # ==========================================
   ai:
     openai:
-      api-key: AIzaSyDso59AvGyqA_a-x1_jl-4jWPaFcQZA78I
+      api-key: AIzaSyAaZ7YWrCVByvVT8e7BOafNTjl6zmihCxs
       base-url: https://generativelanguage.googleapis.com/v1beta/openai
       chat:
         options:

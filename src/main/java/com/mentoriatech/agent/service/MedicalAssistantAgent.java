@@ -31,7 +31,7 @@ public class MedicalAssistantAgent {
             
             Para realizar um agendamento, você precisa saber 4 coisas:
             
-            1. Nome do atendente
+            1. Nome do atendente (na maioria das vezes, buscar no database)
             2. Data
             3. Hora
             4. Nome do pet e nome do tutor (dono do pet)

@@ -1,0 +1,488 @@
+{
+	"info": {
+		"_postman_id": "petshop-agent-collection",
+		"name": "PetShop Agent API",
+		"description": "Collection de testes para o PetShop Agent — Agente Autônomo de IA para agendamento de serviços no PetShop PetCare.\n\nEndpoints disponíveis:\n- GET  /api/health\n- POST /api/session\n- POST /api/chat\n\nAtendentes cadastrados:\n- Ana (Banho & Tosa)\n- Carlos (Consultas)\n- Roberto (Pronto Socorro)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "sessionId",
+			"value": "",
+			"type": "string",
+			"description": "Preenchido automaticamente após criar sessão ou enviar primeira mensagem"
+		}
+	],
+	"item": [
+		{
+			"name": "🔹 Teste 0 — Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/health",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "health"]
+				},
+				"description": "Verifica se a aplicação está no ar.\n\nResultado esperado:\n{ \"status\": \"UP\", \"service\": \"petshop-agent\" }"
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"pm.test(\"Service é petshop-agent\", () => {",
+							"    const body = pm.response.json();",
+							"    pm.expect(body.status).to.eql('UP');",
+							"    pm.expect(body.service).to.eql('petshop-agent');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 1 — Criar Sessão",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/session",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "session"]
+				},
+				"description": "Cria uma nova sessão de conversa e retorna um sessionId UUID.\n\nResultado esperado:\n{ \"sessionId\": \"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\" }"
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"pm.test(\"sessionId retornado\", () => {",
+							"    const body = pm.response.json();",
+							"    pm.expect(body.sessionId).to.be.a('string').and.not.empty;",
+							"    pm.collectionVariables.set('sessionId', body.sessionId);",
+							"    console.log('sessionId salvo:', body.sessionId);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 2 — Primeira Mensagem (Saudação)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userMessage\": \"Olá, quero agendar um serviço para meu pet\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Inicia a conversa sem sessionId — será criado automaticamente.\n\nResultado esperado: agente cumprimenta e pergunta qual serviço ou atendente desejado."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"pm.test(\"sessionId gerado automaticamente\", () => {",
+							"    const body = pm.response.json();",
+							"    pm.expect(body.sessionId).to.be.a('string').and.not.empty;",
+							"    pm.expect(body.replyText).to.be.a('string').and.not.empty;",
+							"    pm.collectionVariables.set('sessionId', body.sessionId);",
+							"    console.log('sessionId:', body.sessionId);",
+							"    console.log('Agente:', body.replyText);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 3 — Buscar Atendente por Nome (Ana — Existente)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"userMessage\": \"Quero agendar com a Ana\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Continua a conversa informando um atendente cadastrado.\n\nResultado esperado: agente reconhece Ana (Banho & Tosa) e pergunta data e horário."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"pm.test(\"Resposta não vazia\", () => {",
+							"    const body = pm.response.json();",
+							"    pm.expect(body.replyText).to.be.a('string').and.not.empty;",
+							"    console.log('Agente:', body.replyText);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 4 — Buscar Atendente por Nome (Maria — Inexistente)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userMessage\": \"Quero agendamento com a Maria\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Testa o fluxo quando o atendente não está cadastrado.\n\nResultado esperado: agente informa que a atendente não existe e pergunta o serviço desejado."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.collectionVariables.set('sessionId', body.sessionId);",
+							"console.log('sessionId:', body.sessionId);",
+							"console.log('Agente:', body.replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 5 — Buscar por Serviço (Consultas — Existente)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"userMessage\": \"Preciso de uma consulta veterinária\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Testa busca de atendentes por serviço existente.\n\nResultado esperado: agente encontra Carlos (Consultas) e oferece o agendamento."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 6 — Buscar por Serviço (Adestramento — Inexistente)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userMessage\": \"Quero agendar adestramento\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Testa quando o serviço solicitado não existe.\n\nResultado esperado: agente informa que não oferece adestramento e lista: Banho & Tosa, Consultas, Pronto Socorro."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 7 — Listar Serviços Disponíveis",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userMessage\": \"Quais serviços vocês oferecem?\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Testa se o agente lista os serviços disponíveis.\n\nResultado esperado: agente lista Banho & Tosa, Consultas e Pronto Socorro."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 8a — Fluxo Completo: Iniciar",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userMessage\": \"Oi, quero marcar um banho para meu cachorro\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Passo 1 do fluxo completo — inicia a conversa.\n\nResultado esperado: agente pergunta qual serviço ou atendente."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.collectionVariables.set('sessionId', body.sessionId);",
+							"console.log('[Passo 1] sessionId:', body.sessionId);",
+							"console.log('[Passo 1] Agente:', body.replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 8b — Fluxo Completo: Informar Atendente",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"userMessage\": \"Com a Ana, por favor\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Passo 2 do fluxo completo — informa o atendente.\n\nResultado esperado: agente reconhece a Ana (Banho & Tosa) e pede data e horário."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('[Passo 2] Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 8c — Fluxo Completo: Informar Data e Hora",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"userMessage\": \"Amanhã às 14:00\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Passo 3 do fluxo completo — informa a data e hora.\n\nResultado esperado: agente verifica disponibilidade no Google Calendar."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('[Passo 3] Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 8d — Fluxo Completo: Confirmar (Tutor + Pet)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"userMessage\": \"Pode confirmar! Meu nome é Giovanni e meu cachorro se chama Rex\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Passo 4 do fluxo completo — confirma com nome do tutor e do pet.\n\nResultado esperado: agente cria o evento no Google Calendar e confirma o agendamento com link."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('[Passo 4] Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 9 — Mensagem Fora do Escopo",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userMessage\": \"Qual a previsão do tempo para amanhã?\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Testa se o agente se mantém no escopo do PetShop.\n\nResultado esperado: agente informa que só trata de agendamentos do PetShop PetCare."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+							"console.log('Agente:', pm.response.json().replyText);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔹 Teste 10 — Body Inválido",
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/chat",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "chat"]
+				},
+				"description": "Testa o tratamento de erros com body vazio.\n\nResultado esperado: API retorna erro 400 (Bad Request) ou comportamento de fallback."
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Retorna 400 ou 200 com fallback\", () => {",
+							"    pm.expect(pm.response.code).to.be.oneOf([400, 200]);",
+							"});",
+							"console.log('Status:', pm.response.status);",
+							"console.log('Body:', pm.response.text());"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		}
+	]
+}
